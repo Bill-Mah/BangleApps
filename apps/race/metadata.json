@@ -3,6 +3,8 @@
   "shortName" : "Race",
   "icon": "race.png",
   "description": "GPS Race Timer and Recorder",
+  "supports" : ["BANGLEJS2"],
+  "readme": "README.md",
   "tags": "",
   "storage": [
     {"name":"race.app.js","url":"app.js"},
