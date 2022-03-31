@@ -1,11 +1,12 @@
 { "id": "race",
   "name": "Race Timer",
+  "version": "0.67",
   "shortName" : "Race",
   "icon": "race.png",
   "description": "GPS Race Timer and Recorder",
   "supports" : ["BANGLEJS2"],
   "readme": "README.md",
-  "tags": "",
+  "tags": "GPS",
   "storage": [
     {"name":"race.app.js","url":"app.js"},
     {"name":"race.img","url":"app-icon.js","evaluate":true}
