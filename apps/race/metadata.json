@@ -1,7 +1,7 @@
 { "id": "race",
   "name": "Race Timer",
   "shortName" : "Race",
-  "icon": "app.png",
+  "icon": "race.png",
   "description": "GPS Race Timer and Recorder",
   "tags": "",
   "storage": [
