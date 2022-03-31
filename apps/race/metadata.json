@@ -9,5 +9,5 @@
   "storage": [
     {"name":"race.app.js","url":"app.js"},
     {"name":"race.img","url":"app-icon.js","evaluate":true}
-  ],
-},
+  ]
+}
