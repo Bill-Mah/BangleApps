@@ -1,0 +1,11 @@
+{ "id": "race",
+  "name": "Race Timer",
+  "shortName" : "Race",
+  "icon": "app.png",
+  "description": "GPS Race Timer and Recorder",
+  "tags": "",
+  "storage": [
+    {"name":"race.app.js","url":"app.js"},
+    {"name":"race.img","url":"app-icon.js","evaluate":true}
+  ],
+},
