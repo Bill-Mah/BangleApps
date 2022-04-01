@@ -1,1 +1,2 @@
 0.67: Initial version
+0.68: Set GPS to output all NMEA messages on kill. App only outputs GGA messages. Turned on SBAS satellites; this is a test. Should improve position accuracy if corrections are available.
