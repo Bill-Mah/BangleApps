@@ -5,13 +5,18 @@
 // 
 
 
-const versionString = "version 0.67"; 
+const versionString = "version 0.68"; 
 
+
+//
+// 0.68
+// restore all NMEA message on kill
+// turned on SBAS satellites for corrections; don't know if this will work or not 
+//
 //
 // 0.67
 // added local time display to Timer screen
 // 
-//
 //
 //
 // 0.66
@@ -717,6 +722,30 @@ function onGPS(fix) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+function configureNMEA() {
+  var cmd = "$PCAS03,1,0,0,0,0,0,0,0,0,,0,,,0*33";
+  Serial1.println(cmd);
+}
+
+
+function configureGNSS() {
+  //var cmd = "$PCAS04,7*1E"; // GPS + BDS + GLONASS 
+  var cmd = "$PCAS04,3*1A"; // GPS + BDS
+  //var cmd = "$PCAS04,1*18"; // GPS
+
+  Serial1.println(cmd);
+
+}
+
+function configureSBAS() {
+  var cmd = "$PCAS15,4,FFFF*31"; //turn on satellites 1-16 of SBAS
+
+  Serial1.println(cmd);
+}
+
+
+
+
 let nmeafix = {
   "lat": 0.0,
   "lon": 0.0,
@@ -966,16 +995,24 @@ Bangle.on('step', (up) => {
           
 
 
-Bangle.setGPSPower(0);
+//Bangle.setGPSPower(0);
+D29.write(0);
 Serial1.setup(9600,{rx:D30, tx:D31});
-Serial1.println("$PCAS04,3*1A"); // GPS + BDS
-Serial1.println("$PCAS03,1,0,0,0,0,0,0,0,0,,0,,,0*33");   // only output GGA
+
+setTimeout(configureNMEA, 1000); // only output GGA
+setTimeout(configureGNSS, 1000); // GPS + BDS
+setTimeout(configureSBAS, 1000); //turn on satellites 1-16 of SBAS
+
 Bangle.on('GPS-raw', nmeaHandler);
-Bangle.setGPSPower(1);
+D29.write(1);
+//Bangle.setGPSPower(1);
 
 
 
 E.on('kill', function() {
+	
+  Serial1.println("$PCAS03,1,1,1,1,1,1,1,1,1,,1,,,1*33");  // restore all NMEA messages
+	
   if (TCXopen)	
 	writeTCXfileCloser();
 
