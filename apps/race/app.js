@@ -5,10 +5,15 @@
 // 
 
 
-const versionString = "version 0.68"; 
-
+const versionString = "version 0.69"; 
 
 //
+// 0.69
+// modified to use SBAS satellites No. 1-19, corresponding to PRN 120-138,
+//     instead of just 1-16
+// turn off SBAS satellites on kill
+//
+// 
 // 0.68
 // restore all NMEA message on kill
 // turned on SBAS satellites for corrections; don't know if this will work or not 
@@ -721,26 +726,55 @@ function onGPS(fix) {
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-function configureNMEA() {
-  var cmd = "$PCAS03,1,0,0,0,0,0,0,0,0,,0,,,0*33";
-  Serial1.println(cmd);
+function checksum(str) {
+	var cs = 0;
+  
+	for (const c of str) {
+		cs = cs ^ c.charCodeAt(0); //XOR
+	}
+  
+	return cs.toString(16).toUpperCase().padStart(2, '0');
 }
 
+function configureNMEA() {
+  var cmd = "PCAS03,1,0,0,0,0,0,0,0,0,,0,,,0";  // only GGA messages
+  cmd = "$" + cmd + "*" + checksum(cmd);
+  Serial1.println(cmd);
+  writeLogFile(cmd + "\n");
+}
+
+function restoreNMEA() {
+  var cmd = "PCAS03,1,1,1,1,1,1,1,1,1,,1,,,1"; // all messages
+  cmd = "$" + cmd + "*" + checksum(cmd);  
+  Serial1.println(cmd);
+  writeLogFile(cmd + "\n");
+}
 
 function configureGNSS() {
-  //var cmd = "$PCAS04,7*1E"; // GPS + BDS + GLONASS 
-  var cmd = "$PCAS04,3*1A"; // GPS + BDS
-  //var cmd = "$PCAS04,1*18"; // GPS
+  //var cmd = "PCAS04,7"; // GPS + BDS + GLONASS 
+  var cmd = "PCAS04,3"; // GPS + BDS
+  //var cmd = "PCAS04,1"; // GPS
 
+  cmd = "$" + cmd + "*" + checksum(cmd);
   Serial1.println(cmd);
-
+  writeLogFile(cmd + "\n");
 }
 
 function configureSBAS() {
-  var cmd = "$PCAS15,4,FFFF*31"; //turn on satellites 1-16 of SBAS
+  // SBAS satellite (SBAS satellite No. 1-19, corresponding to PRN 120-138
+  //var cmd = "PCAS15,4,FFFF"; //turn on satellites 1-16 of SBAS
+  var cmd = "PCAS15,4,7FFFF"; //turn on satellites 1-19 of SBAS
 
+  cmd = "$" + cmd + "*" + checksum(cmd);
   Serial1.println(cmd);
+  writeLogFile(cmd + "\n");
+}
+
+function turnoffSBAS() {
+  var cmd = "PCAS15,4,0"; //turn off of SBAS
+  cmd = "$" + cmd + "*" + checksum(cmd);
+  Serial1.println(cmd);
+  writeLogFile(cmd + "\n");
 }
 
 
@@ -1001,7 +1035,7 @@ Serial1.setup(9600,{rx:D30, tx:D31});
 
 setTimeout(configureNMEA, 1000); // only output GGA
 setTimeout(configureGNSS, 1000); // GPS + BDS
-setTimeout(configureSBAS, 1000); //turn on satellites 1-16 of SBAS
+setTimeout(configureSBAS, 1000); //turn on satellites 1-19 of SBAS
 
 Bangle.on('GPS-raw', nmeaHandler);
 D29.write(1);
@@ -1009,10 +1043,11 @@ D29.write(1);
 
 
 
-E.on('kill', function() {
-	
-  Serial1.println("$PCAS03,1,1,1,1,1,1,1,1,1,,1,,,1*33");  // restore all NMEA messages
-	
+E.on('kill', function() {	
+  restoreNMEA();
+  turnoffSBAS();
+  //D29.write(0); // turn GPS off
+  
   if (TCXopen)	
 	writeTCXfileCloser();
 
