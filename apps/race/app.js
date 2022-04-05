@@ -5,8 +5,11 @@
 // 
 
 
-const versionString = "version 0.70"; 
-
+const versionString = "version 0.71"; 
+//
+// 0.71
+// revert to use SBAS satellites No. 1-16 (PCAS15,4,FFFF)
+//
 //
 // 0.70
 // fixed so GPS turns off properly on kill
@@ -767,8 +770,8 @@ function configureGNSS() {
 
 function configureSBAS() {
   // SBAS satellite (SBAS satellite No. 1-19, corresponding to PRN 120-138
-  //var cmd = "PCAS15,4,FFFF"; //turn on satellites 1-16 of SBAS
-  var cmd = "PCAS15,4,7FFFF"; //turn on satellites 1-19 of SBAS
+  var cmd = "PCAS15,4,FFFF"; //turn on satellites 1-16 of SBAS
+  //var cmd = "PCAS15,4,7FFFF"; //turn on satellites 1-19 of SBAS
 
   cmd = "$" + cmd + "*" + checksum(cmd);
   Serial1.println(cmd);
