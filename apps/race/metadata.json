@@ -1,6 +1,6 @@
 { "id": "race",
   "name": "Race Timer",
-  "version": "0.70",
+  "version": "0.71",
   "shortName" : "Race",
   "icon": "race.png",
   "description": "GPS Race Timer and Recorder",
