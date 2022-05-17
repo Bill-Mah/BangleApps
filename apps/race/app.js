@@ -5,7 +5,15 @@
 // 
 
 
-const versionString = "version 0.71"; 
+const versionString = "version 0.73"; 
+//
+// 0.73
+// fixed timer clearing function
+//
+//
+// 0.72
+// added mode to turn SBAS satellite use on/off
+//
 //
 // 0.71
 // revert to use SBAS satellites No. 1-16 (PCAS15,4,FFFF)
@@ -204,9 +212,11 @@ E.showMessage("Loading..."); // avoid showing rubbish on screen
 // 0: distance and pace
 // 1: elapsed time; Clear, Start, Stop
 // 2: average pace
-// 3: Clear - called by swipe in mode 1 (elapsed time)
-// 4: altitude differences - called by swipe in mode 0 (distance and pace)
-// 5: steps - called by swipe in mode 2 (average pace)
+// 3: test - toggle SBAS on/off // 2022-04-07
+//
+// 4: Clear - called by swipe in mode 1 (elapsed time)
+// 5: altitude differences - called by swipe in mode 0 (distance and pace)
+// 6: steps - called by swipe in mode 2 (average pace)
 
 
 
@@ -269,6 +279,8 @@ var lastAvePaceUpdate = 0.0;
 var lastAveragePace = 0.0;
 var averagePace = 0.0;
 
+
+var SBASon = false;
 
 
 // Check settings for what type our clock should be
@@ -369,7 +381,9 @@ function gpsDistance(lat1, lon1, lat2, lon2)
 //    2 average pace
 //    3 clear time, distance, altitude changes
 //    4 altitude changes
-//  
+//    5 steps - called by swipe in mode 2 (average pace)
+//    6 test - toggle SBAS on/off // 2022-04-07
+ 
 
 var logCount = 0;
 
@@ -385,12 +399,12 @@ function onGPS(fix) {
   
   var batteryLevel = E.getBattery();
   
-  if (batteryLevel < 25.0) {
+  if (batteryLevel < 15.0) {
 	  g.setColor(1, 0, 0); // red
 	  g.fillCircle(5, 5, 5);
 	  g.setColor(1, 1, 1);
   }
-  else if (batteryLevel < 35.0) {
+  else if (batteryLevel < 30.0) {
 	  g.setColor(1, 1, 0); // yellow
 	  g.fillCircle(5, 5, 5);
 	  g.setColor(1, 1, 1);
@@ -663,13 +677,24 @@ function onGPS(fix) {
 		g.setFontVector(20);
 		g.drawString("Average / km", 20, 132);
 	}
-	else if (outputMode == 3) {  // clear time/distance
+	else if (outputMode == 3) {  // SBAS
+		g.setFontVector(35); 
+		
+		if (SBASon)
+			g.drawString("sbas: ON", 5, 48);
+		else
+			g.drawString("sbas: OFF", 5, 48);
+	
+		g.setFontVector(15);
+		g.drawString("Press Button to toggle", 5, 132);
+	}
+	else if (outputMode == 4) {  // clear time/distance
 		g.setFontVector(25);
 		g.drawString("CLEAR", 40, 60);  
 		g.drawString("Press Button", 10, 100);  
       
 	}	
-	else if (outputMode == 4) {  // altitude changes
+	else if (outputMode == 5) {  // altitude changes
 		var up = getSumUpAltitudes();
 		var down = getSumDownAltitudes();
 		
@@ -680,7 +705,7 @@ function onGPS(fix) {
 		g.setFontVector(20);
 	    g.drawString("Elev. diffs. (m)", 10, 150);  
 	}     
-	else if (outputMode == 5) {  // total steps
+	else if (outputMode == 6) {  // total steps
 		if (totalSteps > 9999)
 			g.setFontVector(65); 
 		else  
@@ -769,20 +794,31 @@ function configureGNSS() {
 }
 
 function configureSBAS() {
+   const thisTime = new Date(); 
+   let timeString = thisTime.toISOString();
+	
   // SBAS satellite (SBAS satellite No. 1-19, corresponding to PRN 120-138
   var cmd = "PCAS15,4,FFFF"; //turn on satellites 1-16 of SBAS
   //var cmd = "PCAS15,4,7FFFF"; //turn on satellites 1-19 of SBAS
 
   cmd = "$" + cmd + "*" + checksum(cmd);
   Serial1.println(cmd);
-  writeLogFile(cmd + "\n");
+  writeLogFile(timeString + ": " + cmd + "\n");
+  
+  SBASon = true;
 }
 
 function turnoffSBAS() {
+  const thisTime = new Date();
+  let timeString = thisTime.toISOString();
+	
+	
   var cmd = "PCAS15,4,0"; //turn off of SBAS
   cmd = "$" + cmd + "*" + checksum(cmd);
   Serial1.println(cmd);
-  writeLogFile(cmd + "\n");
+  writeLogFile(timeString + ": " + cmd + "\n");
+  
+  SBASon = false;
 }
 
 
@@ -833,7 +869,7 @@ function parseLatLon(s) {
  // parse $GNGGA message
  //
  // 0      1          2          3 4           5 6 7  8   9     10    
- //        time       latitude     longitude     Q SV     Alt
+ //        time       latitude     longitude     Q SV HDOP Alt
  // $GNGGA,221011.000,5014.14821,N,11923.75220,W,1,06,2.0,344.6,M,-16.5,M,,*7B
  //
  
@@ -877,10 +913,11 @@ function parseLatLon(s) {
 				
 				nmeafix.fix = nmeaArray[6];
 				nmeafix.satellites = parseInt(nmeaArray[7]);
+				nmeafix.hdop = parseFloat(nmeaArray[8]);
 				
 				if (nmeafix.satellites != prevNumSats){
 					prevNumSats = nmeafix.satellites;
-					writeLogFile(nmeaArray[1] + ": Sats = " + nmeafix.satellites + "\n");
+					writeLogFile(nmeaArray[1] + ": Sats = " + nmeafix.satellites + ", HDOP = " + nmeafix.hdop + "\n");
 				}
 					
 				nmeafix.alt = parseFloat(nmeaArray[9]);               
@@ -888,7 +925,8 @@ function parseLatLon(s) {
 		}
 	}
 	else {
-		nonGGAcount++;		
+		nonGGAcount++;	
+		writeLogFile(nmea + "\n");	 
 	}
 	
 	if (lastFix.alt != alt0)
@@ -927,7 +965,7 @@ function parseLatLon(s) {
 
 Bangle.on('swipe', function (direction) {
   if (initialStart == 0) {  // clear and start timer
-	outputMode = 3;
+	outputMode = 4;
  	clearTimeDistance();
 	timerOn = 1;
 	initialStart = 1;
@@ -950,29 +988,32 @@ Bangle.on('swipe', function (direction) {
   else if (direction === -1) {  // left
 	outputMode--;
 	if (outputMode < 0)
-		outputMode = 2;
-	else if (outputMode == 3) // should not get to CLEAR by swipe left  
+		outputMode = 3;
+	else if (outputMode == 4) // should not get to CLEAR by swipe left  
 		outputMode = 1;
   } 
   else if (direction == 1) { // right
 	outputMode++;
-	if (outputMode > 2)
+	if (outputMode > 3)
 		outputMode = 0;
   } 
   else if (direction == 0) { // up or down
 	if (outputMode == 1) {  // elapsed time  
-		outputMode = 3; // clear time/distance 
+		outputMode = 4; // clear time/distance 
+	}
+	else if (outputMode == 4) {  // clear time/distance 
+		outputMode = 1; // elapsed time  
 	}
 	else if (outputMode == 0) { // distance/pace
-		outputMode = 4;  // altitude changes
+		outputMode = 5;  // altitude changes
 	}
-	else if (outputMode == 4) { // altitude changes
+	else if (outputMode == 5) { // altitude changes
 		outputMode = 0;  // distance/pace
 	}
 	else if (outputMode == 2) { // average pace
-		outputMode = 5;  // total steps
+		outputMode = 6;  // total steps
 	}
-	else if (outputMode == 5) { // total steps
+	else if (outputMode == 6) { // total steps
 		outputMode = 2;  // average pace
 	}	
   }
@@ -994,15 +1035,22 @@ setWatch(() => {
 		startNewTCX();
 	}  
   } 
-  else if (outputMode == 3) { // clear 
+  else if (outputMode == 4) { // clear 
 	clearTimeDistance();
 	outputMode = 1;	  
   }
+  else if (outputMode == 3) { // toggle SBAS
+	if (SBASon)
+		turnoffSBAS();
+	else
+		configureSBAS();
+  }
+ 
 }, BTN, {edge:"rising", debounce:50, repeat:true});
 
 
 function clearTimeDistance() {
-  if (outputMode == 3) {
+  if (outputMode == 4) {
     
     startTime = 0;
     elapsedTime = 0;
