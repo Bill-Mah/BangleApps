@@ -3,3 +3,5 @@
 0.69: modified to use SBAS satellites No. 1-19, corresponding to PRN 120-138, instead of just 1-16. Turn off SBAS satellites on kill. 
 0.70: changed GPS power-on code; GPS not on would have caused the start screen to not display correctly
 0.71: revert to issuing command to use SBAS satellites 1-16 instead of satellites 1-19
+0.72: added mode to turn SBAS satellite use on/off
+0.73: fixed timer clearing function
